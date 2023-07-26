@@ -25,13 +25,11 @@ func GetAllFiles(wl *worklist.Worklist, path string) {
 		}
 	}
 
-	
-
 }
 
 func main() {
-	// searchstring := os.Args[1]
-	// directory := os.Args[2]
+	searchstring := os.Args[1]
+	directory := os.Args[2]
 
 	// search directory for all files and subdirectories
 	// if subdirectory search subdirectory for all files (recursion?)
@@ -44,15 +42,32 @@ func main() {
 
 	var workersWg sync.WaitGroup
 
+	workersWg.Add(1)
+	go func() {
+		defer workersWg.Done()
+		GetAllFiles(&wl, directory)
+		wl.Finalize(numWorkers)
+	}()
 
-workersWg.Add(1)
-	go func ()  {
-		
+	for i := 0; i < numWorkers; i++ {
+		workersWg.Add(1)
+		go func() {
+			defer workersWg.Done()
+			for {
+				work := wl.Next()
+				if work.Path != "" {
+					workerResult := worker.FindInFile(searchstring, work.Path)
+					if workerResult != nil {
+						for _, result := range workerResult.Inner {
+							results <- result
+						}
+					}
+				} else {
+					return
+				}
+			}
+		}()
 	}
-
-
-	
-
 
 	// for each file search for substring in file and count the lines
 	// if found put the found string into a channel and report it to the terminal
