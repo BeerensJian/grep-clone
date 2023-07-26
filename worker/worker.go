@@ -34,7 +34,7 @@ func FindInFile(searchTerm string, path string) *Results {
 	lineNumber := 0
 
 	for scanner.Scan() {
-		lineNumber += lineNumber
+		lineNumber += 1
 		line := scanner.Text()
 		if strings.Contains(line, searchTerm) {
 			results = append(results, Result{Line: line, LineNum: lineNumber, Path: path})
