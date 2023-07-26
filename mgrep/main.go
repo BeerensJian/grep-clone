@@ -30,10 +30,6 @@ func GetAllFiles(wl *worklist.Worklist, path string) {
 func main() {
 	searchstring := os.Args[1]
 	directory := os.Args[2]
-
-	// search directory for all files and subdirectories
-	// if subdirectory search subdirectory for all files (recursion?)
-
 	wl := worklist.New(100)
 
 	results := make(chan worker.Result, 100)
@@ -69,7 +65,30 @@ func main() {
 		}()
 	}
 
-	// for each file search for substring in file and count the lines
-	// if found put the found string into a channel and report it to the terminal
+	// wait for workers in goroutine to still be able to print while working
+	blockworkersWg := make(chan struct{})
+	go func() {
+		workersWg.Wait()
+		close(blockworkersWg) // when channel is closed and empty, returns default value for its type
+	}()
+
+	var displayWg sync.WaitGroup
+
+	displayWg.Add(1)
+	go func() {
+		for {
+			select {
+			case result := <-results:
+				fmt.Printf("%v[%v]:%v\n", result.Path, result.LineNum, result.Line)
+			case <-blockworkersWg:
+				if len(results) == 0 {
+					displayWg.Done()
+					return
+				}
+			}
+		}
+	}()
+
+	displayWg.Wait()
 
 }
